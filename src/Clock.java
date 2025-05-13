@@ -1,5 +1,6 @@
 import java.text.SimpleDateFormat;
 
+import java.time.LocalTime;
 import java.util.Calendar;
 
 public abstract class Clock {
@@ -17,6 +18,12 @@ public abstract class Clock {
         this.city = city;
     }
 
+    public void setTime(LocalTime time) {
+        this.hour = time.getHour();
+        this.minute = time.getMinute();
+        this.second = time.getSecond();
+
+    }
     public static String setCurrentTimeHour(){
         Calendar calendar = Calendar.getInstance();
         SimpleDateFormat hour = new SimpleDateFormat("HH");
@@ -32,8 +39,6 @@ public abstract class Clock {
         SimpleDateFormat second = new SimpleDateFormat("ss");
         return second.format(calendar.getTime());
     }
-
-
 
     private void setHourWithZoneTime(int summerZoneTime) {
         this.hour = hour + summerZoneTime;
@@ -54,6 +59,7 @@ public abstract class Clock {
         setHourWithZoneTime(newZoneTime);
 
     }
+
 
     @Override
     public String toString(){

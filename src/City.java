@@ -1,6 +1,7 @@
 import java.io.*;
 import java.time.LocalTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class City {
@@ -57,6 +58,7 @@ public class City {
         Map<String, City> cityStringHashMap = new HashMap<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            br.readLine();
             String line;
             while ((line = br.readLine()) != null) {
                 String[] parts = line.split(",", 4);
@@ -70,38 +72,47 @@ public class City {
         return cityStringHashMap;
     }
 
-    public LocalTime localMeanTime(LocalTime localTime) {
-        double longitude = 0;
-        String direction = "";
+        public LocalTime localMeanTime(LocalTime localTime) {
+            int zoneOffset = Integer.parseInt(summerZoneTime);
+            LocalTime utc = localTime.minusHours(zoneOffset);
 
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(file));
-            br.readLine();
-            String line;
-            while ((line = br.readLine()) != null) {
+            String[] coord = longitude.trim().split("\\s+");
+            double deg = Double.parseDouble(coord[0]);
+            String dir = coord.length > 1 ? coord[1] : "";
 
-                String[] longitudeParts = line.split(",");
-                String coord = longitudeParts[3].trim();
-                String[] coordParts = coord.split(" ");
-                longitude = Double.parseDouble(coordParts[0]);
-                direction = coordParts[1];
-            }
-            longitude = (int) Math.round(longitude / 15.0);
+            double signedDeg = deg * (dir.equalsIgnoreCase("W") ? -1 : 1);
 
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        if (direction.equals("E")) {
-            return localTime.plusHours((long) longitude);
-    } else  {
-            return localTime.minusHours((long) longitude);
-        }
+            long offsetSec = Math.round(signedDeg * 240.0);
+
+            return utc.plusSeconds(offsetSec);
     }
 
-    public void displayInfo () {
-        System.out.println("Summer zone time: " + summerZoneTime);
-        System.out.println("Latitude: " + latitude);
-        System.out.println("Longitude: " + longitude);
+    public int timeZoneFit(){
+        LocalTime referenceTime = LocalTime.of(12,0);
+        LocalTime localMean = localMeanTime(referenceTime);
+
+        return Math.abs(localMean.toSecondOfDay() - referenceTime.toSecondOfDay());
     }
 
+    public static int worstTimeZoneFIx(City a, City b){
+        return Integer.compare(b.timeZoneFit(), a.timeZoneFit());
+    }
+    public static void generateAnalogClocksSvg(List<City> cities, AnalogClock baseClock) {
+        String folderName = baseClock.toString().replace(":", "_"); // np. "14_27_45"
+        File dir = new File(folderName);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        for (City city : cities) {
+            baseClock.setCity(city);
+
+            LocalTime now = LocalTime.now();
+            LocalTime localTime = city.localMeanTime(now);
+            baseClock.setTime(localTime);
+
+            String fileName = city.getCapital().replaceAll("\\s+", "_") + ".svg";
+            baseClock.toSvg(new File(dir, fileName).getPath());
+        }
+    }
 }
